@@ -1,5 +1,7 @@
 import cv2
 import mediapipe as mp
+import os
+
 
 mp_face_detection = mp.solutions.face_detection
 mp_drawing = mp.solutions.drawing_utils
@@ -20,7 +22,7 @@ with mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence
                 bboxC = detection.location_data.relative_bounding_box
                 h, w, _ = frame.shape
                 x, y, w, h = int(bboxC.xmin * w), int(bboxC.ymin * h), int(bboxC.width * w), int(bboxC.height * h)
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 1)
 
         cv2.imshow("Face Detection", frame)
 
