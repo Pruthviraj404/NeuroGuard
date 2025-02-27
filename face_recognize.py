@@ -22,6 +22,7 @@ with mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence
             break
 
         frame = sharpen_image(frame,strength=0.5)
+        frame=cv2.resize(frame,(1080,720))
 
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = face_detection.process(rgb_frame)
@@ -34,6 +35,7 @@ with mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 1)
 
         cv2.imshow("Face Detection", frame)
+     
 
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
