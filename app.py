@@ -35,4 +35,5 @@ def save_faces_route():
     return save_faces()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=8080)
+
