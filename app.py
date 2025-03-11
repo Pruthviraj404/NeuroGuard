@@ -34,6 +34,6 @@ def save_faces_route():
     """ Save captured face images """
     return save_faces()
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+if __name__ == "__main__":
+    app.run()
 
