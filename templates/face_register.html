@@ -1,113 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Face Registration</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            background-color: #f4f4f4;
         }
-
-        h2 {
+        video {
+            width: 50%;
+            border: 2px solid black;
             margin-top: 20px;
         }
-
-        input,
         button {
             padding: 10px;
-            margin: 10px;
             font-size: 16px;
-            border: none;
-            border-radius: 5px;
-        }
-
-        button {
-            background-color: #28a745;
-            color: white;
+            margin: 10px;
             cursor: pointer;
-        }
-
-        button:hover {
-            opacity: 0.8;
-        }
-
-        .stop-btn {
-            background-color: #dc3545;
-        }
-
-        #video-container {
-            margin-top: 20px;
-            display: none;
-            /* Initially hidden */
-            justify-content: center;
-        }
-
-        img {
-            border: 2px solid black;
-            border-radius: 10px;
-            width: 640px;
-            height: 480px;
         }
     </style>
 </head>
-
 <body>
-
     <h2>Face Registration</h2>
+    
+    <input type="text" id="studentName" placeholder="Enter Your Name">
+    <button onclick="startCapture()">Start Capture</button>
+    <button onclick="saveFaces()">Save Faces</button>
 
-    <form id="captureForm">
-        <label for="student_name">Enter Student Name:</label>
-        <input type="text" id="student_name" name="student_name" required placeholder="Type name here...">
-        <button type="button" onclick="startCapture()">Start Face Capture</button>
-        <button type="button" class="stop-btn" onclick="stopCapture()">Stop Face Capture</button>
-    </form>
-
-    <div id="video-container">
-        <img id="videoFeed" src="" alt="Live Camera Feed">
+    <div>
+        <img src="{{ url_for('video_feed') }}" id="videoFeed">
     </div>
 
-    <script>
-        function startCapture() {
-            let studentName = document.getElementById("student_name").value.trim();
+    <p id="status"></p>
 
-            if (studentName === "") {
-                alert("Please enter a student name.");
+    <script>
+        var socket = io();
+
+        function startCapture() {
+            let name = document.getElementById("studentName").value;
+            if (name.trim() === "") {
+                alert("Please enter your name.");
                 return;
             }
-
-            // Send student name to the server
-            fetch("/start_capture", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: "student_name=" + encodeURIComponent(studentName)
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        alert(data.error);
-                    } else {
-                        // Show video feed after successful response
-                        document.getElementById("video-container").style.display = "flex";
-                        document.getElementById("videoFeed").src = "/video_feed";
-                    }
-                })
-                .catch(error => {
-                    console.error("Error starting capture:", error);
-                    alert("Failed to start face capture.");
-                });
+            socket.emit('start_capture', { name: name });
         }
 
-        function stopCapture() {
-            document.getElementById("videoFeed").src = "";
-            document.getElementById("video-container").style.display = "none";
+        function saveFaces() {
+            socket.emit('save_faces');
         }
 
+        socket.on('capture_status', function (msg) {
+            document.getElementById("status").innerText = msg;
+        });
+
+        socket.on('save_status', function (msg) {
+            alert(msg);
+        });
     </script>
-
 </body>
-
 </html>

@@ -39,8 +39,7 @@ def start_capture(student_name):
         video.set(3, 640)  # Width
         video.set(4, 480)  # Height
 
-    return f"Face capture started for {user_name}"  # ✅ Ensure a valid return statement
-
+    return f"Face capture started for {user_name}"  
 
 def generate_frames():
     """ Stream webcam and capture faces every 3rd frame """
