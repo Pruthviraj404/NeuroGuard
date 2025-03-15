@@ -3,10 +3,8 @@ import mediapipe as mp
 import os
 import pickle
 
-# Initialize MediaPipe Face Detection
 mp_face_detection = mp.solutions.face_detection
 
-# Load or initialize dataset
 faces_data = {}
 faces_file = "faces_images.pkl"
 
@@ -46,7 +44,7 @@ def generate_frames():
     global frame_count, count, video
     
     if video is None or not video.isOpened():
-        return
+        video = cv2.VideoCapture(0)
     
     with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.6) as face_detection:
         while count < 200:

@@ -3,7 +3,7 @@ from flask_socketio import SocketIO
 import face_recognize
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")  # Allow cross-origin access
 
 @app.route('/')
 def index():
@@ -11,19 +11,19 @@ def index():
 
 @app.route('/video_feed')
 def video_feed():
+    """ Stream video frames from the webcam to the frontend """
     return Response(face_recognize.generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @socketio.on('start_capture')
 def handle_start_capture(data):
     student_name = data.get('name', 'Unknown')
     response = face_recognize.start_capture(student_name)
-    socketio.emit('capture_status', response)
+    socketio.emit('capture_status', {'message': response})
 
 @socketio.on('save_faces')
 def handle_save_faces():
     response = face_recognize.save_faces()
-    socketio.emit('save_status', response)
+    socketio.emit('save_status', {'message': response})
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=8080, debug=True)
-
