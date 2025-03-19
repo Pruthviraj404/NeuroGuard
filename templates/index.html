@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Low Latency Face Capture</title>
+    <title>Live Face Capture</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
 <body>
@@ -16,23 +16,35 @@
         let video = document.getElementById("video");
         let canvas = document.getElementById("canvas");
         let ctx = canvas.getContext("2d");
+        let processedImage = document.getElementById("processed");
         let socket = io.connect("http://" + document.domain + ":" + location.port);
 
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => {
                 video.srcObject = stream;
-                setInterval(sendFrame, 50); // Send frame every 50ms (~20 FPS)
+                setInterval(sendFrame, 50);
             })
-            .catch(err => console.error("Error accessing webcam:", err));
+            .catch(err => console.error("[ERROR] Webcam access denied:", err));
 
         function sendFrame() {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             let frame = canvas.toDataURL("image/jpeg").split(",")[1];
+
+            console.log("[INFO] Sending frame to server"); // Debug
             socket.emit("video_frame", frame);
         }
 
         socket.on("processed_frame", function(data) {
-            document.getElementById("processed").src = "data:image/jpeg;base64," + data;
+            console.log("[INFO] Processed frame received"); // Debug
+            processedImage.src = "data:image/jpeg;base64," + data;
+        });
+
+        socket.on("connect", function() {
+            console.log("[INFO] Connected to Flask server");
+        });
+
+        socket.on("disconnect", function() {
+            console.log("[WARN] Disconnected from server");
         });
     </script>
 </body>
