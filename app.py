@@ -1,24 +1,36 @@
-from flask import Flask, render_template
-from flask_socketio import SocketIO, emit
+import os
+import base64
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")  # Enable WebSocket communication
+
+# Create 'img' folder if it doesn't exist
+IMG_FOLDER = "img"
+os.makedirs(IMG_FOLDER, exist_ok=True)
 
 @app.route('/')
 def index():
-    return render_template('index.html')  # Load HTML page
+    return render_template('index.html')
 
-@socketio.on('offer')
-def handle_offer(data):
-    emit('offer', data, broadcast=True)  # Send offer to the other peer
+@app.route('/save_image', methods=['POST'])
+def save_image():
+    data = request.json
+    images = data.get('images', [])
 
-@socketio.on('answer')
-def handle_answer(data):
-    emit('answer', data, broadcast=True)  # Send answer to the other peer
+    if len(images) != 3:
+        return jsonify({"error": "Please capture 3 images"}), 400
 
-@socketio.on('candidate')
-def handle_candidate(data):
-    emit('candidate', data, broadcast=True)  # Send ICE candidate
+    saved_images = []
+    for i, img_data in enumerate(images):
+        img_bytes = base64.b64decode(img_data.split(",")[1])  # Convert base64 to bytes
+        filename = f"{IMG_FOLDER}/image_{i+1}.jpg"
+        
+        with open(filename, "wb") as f:
+            f.write(img_bytes)
+        
+        saved_images.append(filename)
 
-if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=8080, debug=True)
+    return jsonify({"message": "Images saved successfully", "files": saved_images})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)

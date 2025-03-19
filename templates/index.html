@@ -3,52 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebRTC Video Call</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <title>Webcam Capture</title>
 </head>
 <body>
-    <h1>WebRTC Video Call</h1>
-    <video id="localVideo" autoplay playsinline muted></video>
-    <video id="remoteVideo" autoplay playsinline></video>
-    
-    <button onclick="startCall()">Start Call</button>
+    <h2>Webcam Live Feed</h2>
+    <video id="video" width="640" height="480" autoplay></video>
+    <br>
+    <button onclick="captureImage()">Capture</button>
+    <button onclick="saveImages()">Save</button>
+    <br>
+    <div id="captured-images"></div>
 
     <script>
-        const socket = io.connect("http://" + document.domain + ":5000");
-        let localStream;
-        let peerConnection;
-        const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+        let images = [];
+        let video = document.getElementById('video');
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => console.error("Error accessing webcam:", err));
 
-        async function startCall() {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            document.getElementById("localVideo").srcObject = localStream;
+        function captureImage() {
+            if (images.length >= 3) {
+                alert("You can only capture 3 images!");
+                return;
+            }
+            
+            let canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            let imgData = canvas.toDataURL('image/jpeg');  // Convert to Base64
+            images.push(imgData);
 
-            peerConnection = new RTCPeerConnection(config);
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) socket.emit("candidate", event.candidate);
-            };
-            peerConnection.ontrack = event => {
-                document.getElementById("remoteVideo").srcObject = event.streams[0];
-            };
-
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            socket.emit("offer", offer);
+            let imgElement = document.createElement('img');
+            imgElement.src = imgData;
+            imgElement.width = 160;
+            imgElement.height = 120;
+            document.getElementById('captured-images').appendChild(imgElement);
         }
 
-        socket.on("offer", async offer => {
-            if (!peerConnection) startCall();
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        function saveImages() {
+            if (images.length !== 3) {
+                alert("Please capture exactly 3 images before saving.");
+                return;
+            }
 
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            socket.emit("answer", answer);
-        });
-
-        socket.on("answer", answer => peerConnection.setRemoteDescription(new RTCSessionDescription(answer)));
-        socket.on("candidate", candidate => peerConnection.addIceCandidate(new RTCIceCandidate(candidate)));
+            fetch('/save_image', {
+                method: 'POST',
+                body: JSON.stringify({ images: images }),
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => alert(data.message))
+            .catch(error => console.error("Error:", error));
+        }
     </script>
 </body>
 </html>
