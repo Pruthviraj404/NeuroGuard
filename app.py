@@ -1,29 +1,35 @@
 from flask import Flask, render_template, Response
 from flask_socketio import SocketIO
-import face_recognize
+import cv2
+import base64
+import numpy as np
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")  # Allow cross-origin access
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.route('/')
 def index():
-    return render_template('face_register.html')
+    """Render the main page."""
+    return render_template('index.html')
 
-@app.route('/video_feed')
-def video_feed():
-    """ Stream video frames from the webcam to the frontend """
-    return Response(face_recognize.generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+@socketio.on('video_frame')
+def handle_frame(data):
+    """Receive frame from client and process it."""
+    frame_data = base64.b64decode(data)
+    npimg = np.frombuffer(frame_data, dtype=np.uint8)
+    frame = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
 
-@socketio.on('start_capture')
-def handle_start_capture(data):
-    student_name = data.get('name', 'Unknown')
-    response = face_recognize.start_capture(student_name)
-    socketio.emit('capture_status', {'message': response})
+    # Optimize by resizing the frame to reduce data size
+    frame = cv2.resize(frame, (320, 240))
 
-@socketio.on('save_faces')
-def handle_save_faces():
-    response = face_recognize.save_faces()
-    socketio.emit('save_status', {'message': response})
+    # Convert to grayscale (example processing)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    frame = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+
+    # Convert back to JPEG and send to client
+    _, buffer = cv2.imencode('.jpg', frame)
+    encoded_frame = base64.b64encode(buffer).decode('utf-8')
+    socketio.emit('processed_frame', encoded_frame)
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=8080, debug=True)
