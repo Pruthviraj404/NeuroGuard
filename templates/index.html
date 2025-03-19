@@ -3,49 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Face Capture</title>
+    <title>WebRTC Video Call</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
 <body>
-    <h1>Live Face Capture (Low Latency)</h1>
-    <video id="video" width="320" height="240" autoplay></video>
-    <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
-    <img id="processed" width="320" height="240" alt="Processed Frame">
+    <h1>WebRTC Video Call</h1>
+    <video id="localVideo" autoplay playsinline muted></video>
+    <video id="remoteVideo" autoplay playsinline></video>
+    
+    <button onclick="startCall()">Start Call</button>
 
     <script>
-        let video = document.getElementById("video");
-        let canvas = document.getElementById("canvas");
-        let ctx = canvas.getContext("2d");
-        let processedImage = document.getElementById("processed");
-        let socket = io.connect("http://" + document.domain + ":" + location.port);
+        const socket = io.connect("http://" + document.domain + ":5000");
+        let localStream;
+        let peerConnection;
+        const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-                video.srcObject = stream;
-                setInterval(sendFrame, 50);
-            })
-            .catch(err => console.error("[ERROR] Webcam access denied:", err));
+        async function startCall() {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById("localVideo").srcObject = localStream;
 
-        function sendFrame() {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            let frame = canvas.toDataURL("image/jpeg").split(",")[1];
+            peerConnection = new RTCPeerConnection(config);
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-            console.log("[INFO] Sending frame to server"); // Debug
-            socket.emit("video_frame", frame);
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) socket.emit("candidate", event.candidate);
+            };
+            peerConnection.ontrack = event => {
+                document.getElementById("remoteVideo").srcObject = event.streams[0];
+            };
+
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            socket.emit("offer", offer);
         }
 
-        socket.on("processed_frame", function(data) {
-            console.log("[INFO] Processed frame received"); // Debug
-            processedImage.src = "data:image/jpeg;base64," + data;
+        socket.on("offer", async offer => {
+            if (!peerConnection) startCall();
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit("answer", answer);
         });
 
-        socket.on("connect", function() {
-            console.log("[INFO] Connected to Flask server");
-        });
-
-        socket.on("disconnect", function() {
-            console.log("[WARN] Disconnected from server");
-        });
+        socket.on("answer", answer => peerConnection.setRemoteDescription(new RTCSessionDescription(answer)));
+        socket.on("candidate", candidate => peerConnection.addIceCandidate(new RTCIceCandidate(candidate)));
     </script>
 </body>
 </html>
