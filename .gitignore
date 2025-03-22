@@ -1,3 +1,7 @@
+<<<<<<< HEAD
 venv
+=======
+venv/
+>>>>>>> restore-branch
 __pycache__/
 *.pyc

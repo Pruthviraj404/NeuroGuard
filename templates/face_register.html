@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Registration</title>
+</head>
+<body>
+    <h1>Face Registration</h1>
+    <input type="text" id="student_name" placeholder="Enter Your Name">
+    <button onclick="startCapture()">Start Capture</button>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+
+    <script>
+        let video = document.getElementById('video');
+        let canvas = document.getElementById('canvas');
+        let context = canvas.getContext('2d');
+
+        // Access user webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+            })
+            .catch((err) => console.error("Error accessing webcam: ", err));
+
+        function startCapture() {
+            let studentName = document.getElementById("student_name").value;
+            if (!studentName) {
+                alert("Please enter your name!");
+                return;
+            }
+
+            // Capture frame
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert to base64
+            let frameData = canvas.toDataURL("image/jpeg");
+
+            // Send frame to Flask backend
+            fetch('/capture_face', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_name: studentName, frame: frameData })
+            })
+            .then(response => response.json())
+            .then(data => alert(data.message))
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>
