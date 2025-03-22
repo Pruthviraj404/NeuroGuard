@@ -1,113 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Face Registration</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f4f4f4;
-        }
-
-        h2 {
-            margin-top: 20px;
-        }
-
-        input,
-        button {
-            padding: 10px;
-            margin: 10px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-        }
-
-        button {
-            background-color: #28a745;
-            color: white;
-            cursor: pointer;
-        }
-
-        button:hover {
-            opacity: 0.8;
-        }
-
-        .stop-btn {
-            background-color: #dc3545;
-        }
-
-        #video-container {
-            margin-top: 20px;
-            display: none;
-            /* Initially hidden */
-            justify-content: center;
-        }
-
-        img {
-            border: 2px solid black;
-            border-radius: 10px;
-            width: 640px;
-            height: 480px;
-        }
-    </style>
 </head>
-
 <body>
-
-    <h2>Face Registration</h2>
-
-    <form id="captureForm">
-        <label for="student_name">Enter Student Name:</label>
-        <input type="text" id="student_name" name="student_name" required placeholder="Type name here...">
-        <button type="button" onclick="startCapture()">Start Face Capture</button>
-        <button type="button" class="stop-btn" onclick="stopCapture()">Stop Face Capture</button>
-    </form>
-
-    <div id="video-container">
-        <img id="videoFeed" src="" alt="Live Camera Feed">
-    </div>
+    <h1>Face Registration</h1>
+    <input type="text" id="student_name" placeholder="Enter Your Name">
+    <button onclick="startCapture()">Start Capture</button>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" style="display: none;"></canvas>
 
     <script>
-        function startCapture() {
-            let studentName = document.getElementById("student_name").value.trim();
+        let video = document.getElementById('video');
+        let canvas = document.getElementById('canvas');
+        let context = canvas.getContext('2d');
 
-            if (studentName === "") {
-                alert("Please enter a student name.");
+        // Access user webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+            })
+            .catch((err) => console.error("Error accessing webcam: ", err));
+
+        function startCapture() {
+            let studentName = document.getElementById("student_name").value;
+            if (!studentName) {
+                alert("Please enter your name!");
                 return;
             }
 
-            // Send student name to the server
-            fetch("/start_capture", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: "student_name=" + encodeURIComponent(studentName)
+            // Capture frame
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert to base64
+            let frameData = canvas.toDataURL("image/jpeg");
+
+            // Send frame to Flask backend
+            fetch('/capture_face', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_name: studentName, frame: frameData })
             })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        alert(data.error);
-                    } else {
-                        // Show video feed after successful response
-                        document.getElementById("video-container").style.display = "flex";
-                        document.getElementById("videoFeed").src = "/video_feed";
-                    }
-                })
-                .catch(error => {
-                    console.error("Error starting capture:", error);
-                    alert("Failed to start face capture.");
-                });
+            .then(response => response.json())
+            .then(data => alert(data.message))
+            .catch(error => console.error('Error:', error));
         }
-
-        function stopCapture() {
-            document.getElementById("videoFeed").src = "";
-            document.getElementById("video-container").style.display = "none";
-        }
-
     </script>
-
 </body>
-
 </html>

@@ -1,39 +1,45 @@
-from flask import Flask, render_template, Response, request, jsonify
-from face_recognize import generate_frames, save_faces, start_capture
+from flask import Flask, render_template, request, jsonify
+import cv2
+import numpy as np
+import base64
+import os
 
-# Initialize Flask app
 app = Flask(__name__)
+
+# Directory to save captured faces
+SAVE_DIR = "captured_faces"
+if not os.path.exists(SAVE_DIR):
+    os.makedirs(SAVE_DIR)
 
 @app.route('/')
 def index():
     """ Render HTML page """
     return render_template('face_register.html')
 
-@app.route('/video_feed')
-def video_feed():
-    """ Stream video frames """
-    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+@app.route('/capture_face', methods=['POST'])
+def capture_face():
+    """ Capture face from user webcam feed """
+    data = request.json
+    student_name = data.get('student_name')
+    frame_data = data.get('frame')
 
-@app.route('/start_capture', methods=['POST'])
-def start_capture_route():
-    """ Start capturing faces """
-    student_name = request.form.get('student_name')  # Get name from form
-    if not student_name:
-        return jsonify({'error': 'No student name provided'}), 400  # Return an error if empty
+    if not student_name or not frame_data:
+        return jsonify({'error': 'Missing data'}), 400
 
-    response = start_capture(student_name)  # Call function from face_recognize.py
+    try:
+        # Decode base64 frame
+        frame_bytes = base64.b64decode(frame_data.split(',')[1])
+        np_img = np.frombuffer(frame_bytes, dtype=np.uint8)
+        img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
 
-    if response is None:
-        return jsonify({'error': 'Failed to start capture'}), 500  # Handle unexpected errors
+        # Save the image
+        filename = os.path.join(SAVE_DIR, f"{student_name}.jpg")
+        cv2.imwrite(filename, img)
 
-    return jsonify({'message': response})  # Return success response
+        return jsonify({'message': 'Face captured successfully!', 'filename': filename})
 
-
-@app.route('/save_faces')
-def save_faces_route():
-    """ Save captured face images """
-    return save_faces()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
-    app.run()
-
+    app.run(host="0.0.0.0", port=5000, debug=True)
