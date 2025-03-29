@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition</title>
+    <style>
+        body {
+            background-color: #1e1e2d;
+            color: #fff;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .container {
+            background: #29293d;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 700px;
+        }
+        h2 {
+            margin-bottom: 15px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        video {
+            border-radius: 10px;
+            width: 100%;
+            max-width: 640px;
+            box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.2);
+        }
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        p {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 15px;
+            color: #00ffcc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Face Recognition System</h2>
+        <video id="video" autoplay></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+        <div class="btn-container">
+            <button onclick="startRecognition()">Start Recognition</button>
+            <button onclick="stopRecognition()">Stop</button>
+        </div>
+        <p id="recognized-name">Waiting for recognition...</p>
+    </div>
+
+    <script>
+        let video = document.getElementById("video");
+        let canvas = document.getElementById("canvas");
+        let ctx = canvas.getContext("2d");
+        let isRecognizing = false;
+
+        // Access webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { 
+                video.srcObject = stream;
+            })
+            .catch(err => console.error("Error accessing webcam:", err));
+
+        function startRecognition() {
+            isRecognizing = true;
+            captureAndSend();
+        }
+
+        function stopRecognition() {
+            isRecognizing = false;
+        }
+
+        function captureAndSend() {
+            if (!isRecognizing) return;
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            let imageData = canvas.toDataURL("image/jpeg");
+
+            fetch("/detect_face", {
+                method: "POST",
+                body: JSON.stringify({ image: imageData }),
+                headers: { "Content-Type": "application/json" }
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayRecognition(data);
+            })
+            .catch(error => console.error("Error:", error));
+
+            setTimeout(captureAndSend, 1000);  // Capture every 1 second
+        }
+
+        function displayRecognition(data) {
+            if (data.name) {
+                document.getElementById("recognized-name").innerText = "Recognized: " + data.name;
+            } else {
+                document.getElementById("recognized-name").innerText = "Face not recognized.";
+            }
+        }
+    </script>
+</body>
+</html>  
