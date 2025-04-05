@@ -6,7 +6,6 @@
     <title>Facial Attendance Dashboard</title>
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <style>
-        /* Reset Styles */
         * {
             margin: 0;
             padding: 0;
@@ -20,7 +19,6 @@
             color: white;
         }
 
-        /* Sidebar */
         .sidebar {
             width: 250px;
             height: 100vh;
@@ -60,7 +58,6 @@
             color: #00f3ff;
         }
 
-        /* Main Content */
         .main-content {
             margin-left: 250px;
             flex: 1;
@@ -88,7 +85,6 @@
             margin-left: 10px;
         }
 
-        /* Dashboard Cards */
         .cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -110,7 +106,17 @@
             transform: scale(1.05);
         }
 
-        /* Attendance Log Table */
+        .card button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            border: none;
+            background-color: #00f3ff;
+            color: black;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
         .attendance-log {
             background: #1f1f3d;
             padding: 20px;
@@ -150,7 +156,6 @@
             color: red;
         }
 
-        /* Responsive Design */
         @media (max-width: 768px) {
             .sidebar {
                 width: 100px;
@@ -209,6 +214,22 @@
             </div>
         </section>
 
+        <!-- 👇 New Buttons Section -->
+        <section class="cards">
+            <div class="card">
+                <h3>Register Face</h3>
+                <a href="{{ url_for('face_register') }}">
+                    <button>Go to Face Registration</button>
+                </a>
+            </div>
+            <div class="card">
+                <h3>Recognize Face</h3>
+                <a href="{{ url_for('recognize') }}">
+                    <button>Go to Face Recognition</button>
+                </a>
+            </div>
+        </section>
+
         <section class="attendance-log">
             <h3>Recent Attendance Logs</h3>
             <table>
@@ -222,7 +243,7 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td>John Doe</td>
+                        <td>Doe</td>
                         <td>2025-03-23</td>
                         <td>09:05 AM</td>
                         <td class="present">Present</td>
@@ -234,9 +255,9 @@
                         <td class="late">Late</td>
                     </tr>
                     <tr>
-                        <td>Mike Johnson</td>
+                        <td>Mike Son</td>
                         <td>2025-03-23</td>
-                        <td>Absent</td>
+                        <td>—</td>
                         <td class="absent">Absent</td>
                     </tr>
                 </tbody>

@@ -3,46 +3,56 @@ import cv2
 import numpy as np
 import pickle
 import base64
-from flask import Flask, request, jsonify, render_template
-from keras_facenet import FaceNet  # Pre-trained FaceNet model
+from flask import Flask, request, jsonify, render_template, redirect, session, url_for, flash
+from keras_facenet import FaceNet
+from attendance import mark_attendance
 
 app = Flask(__name__)
+app.secret_key = 'supersecretkey'  # Change in production
 
-# Directory for storing face data
-STORAGE_DIR = "face_data"
-os.makedirs(STORAGE_DIR, exist_ok=True)
+# Admin credentials (for demo)
+admin_credentials = {
+    'xyz1': {'username': 'admin1', 'password': 'pass123'},
+    'abc2': {'username': 'admin2', 'password': 'pass456'}
+}
 
-# Initialize FaceNet model
+# Initialize FaceNet
 embedder = FaceNet()
 
-# Load stored face embeddings
+# Load saved face embeddings
 def load_embeddings():
     embeddings = {}
-    for file in os.listdir(STORAGE_DIR):
-        if file.endswith("_embeddings.pkl"):
-            try:
-                with open(os.path.join(STORAGE_DIR, file), "rb") as f:
-                    data = pickle.load(f)
-                    embeddings[data["username"]] = np.array(data["embeddings"])
-            except Exception as e:
-                print(f"Error loading {file}: {e}")
+    base_dir = "data"
+    for college_folder in os.listdir(base_dir):
+        college_path = os.path.join(base_dir, college_folder)
+        if not os.path.isdir(college_path):
+            continue
+        for file in os.listdir(college_path):
+            if file.endswith("_embeddings.pkl"):
+                try:
+                    with open(os.path.join(college_path, file), "rb") as f:
+                        data = pickle.load(f)
+                        username = data.get("username")
+                        if username:
+                            embeddings[username] = np.array(data["embeddings"])
+                except Exception as e:
+                    print(f"Error loading {file}: {e}")
     return embeddings
 
-face_embeddings = load_embeddings()
-
+# Face recognition function
 def recognize_face(image):
-    """Recognizes a face in the given image."""
     try:
         img_resized = cv2.resize(image, (160, 160))
         img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
-
-        # Normalize embeddings
         embedding = embedder.embeddings(np.expand_dims(img_rgb, axis=0))[0]
-        embedding = embedding / np.linalg.norm(embedding)  # Normalize
+        embedding = embedding / np.linalg.norm(embedding)
 
         best_match = None
         min_dist = float("inf")
-        threshold = 0.7  # Lowered threshold for better accuracy
+        threshold = 0.7
+
+        # Dynamic load for real-time recognition
+        face_embeddings = load_embeddings()
 
         for username, stored_embeddings in face_embeddings.items():
             for stored_embedding in stored_embeddings:
@@ -56,80 +66,108 @@ def recognize_face(image):
         print(f"Face recognition error: {str(e)}")
         return "Error"
 
+# ---------- Routes ----------
+
 @app.route('/')
+def index():
+    return redirect('/login')
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    return render_template("face_recognize.html")
+    if request.method == 'POST':
+        college_id = request.form['college_id'].strip()
+        username = request.form['username'].strip()
+        password = request.form['password'].strip()
+
+        if college_id in admin_credentials:
+            creds = admin_credentials[college_id]
+            if creds['username'] == username and creds['password'] == password:
+                session['college_id'] = college_id
+                session['username'] = username
+                return redirect(url_for('dashboard'))
+            else:
+                flash("Incorrect username or password", "danger")
+        else:
+            flash("College ID not recognized", "danger")
+
+    return render_template("login.html")
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+@app.route('/dashboard')
+def dashboard():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    return render_template('dashboard.html', user=session['username'], college=session['college_id'])
 
 @app.route('/faceregistration')
 def face_register():
+    if 'username' not in session:
+        return redirect(url_for('login'))
     return render_template("face_register.html")
 
-@app.route('/dashboard')
-def home():
-    return render_template('dashboard.html')
+@app.route('/recognize')
+def recognize():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    return render_template("face_recognize.html")
 
-@app.route('/save_images', methods=['POST'])
-def save_images():
-    """Saves face embeddings from uploaded images."""
+@app.route('/save_face', methods=['POST'])
+def save_face():
     try:
         data = request.get_json()
-        if not data or "username" not in data or "images" not in data:
-            return jsonify({"message": "Invalid data format"}), 400
+        college_id = data.get("college_id")
+        username = data.get("username")
+        image_data = data.get("image")
 
-        username = data["username"].strip()
-        images = data["images"]
+        if not college_id or not username or not image_data:
+            return jsonify({"message": "College ID, username, and image are required"}), 400
 
-        if not username or not isinstance(images, list) or len(images) == 0:
-            return jsonify({"message": "Username and images are required"}), 400
+        img_bytes = base64.b64decode(image_data.split(",")[1])
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-        user_file = os.path.join(STORAGE_DIR, f"{username}_embeddings.pkl")
-        embeddings_data = {"username": username, "embeddings": []}
+        if img is None:
+            return jsonify({"message": "Invalid image data"}), 400
 
-        valid_images = 0
-        for img_data in images:
-            try:
-                img_bytes = base64.b64decode(img_data.split(',')[1])
-                nparr = np.frombuffer(img_bytes, np.uint8)
-                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        img_resized = cv2.resize(img, (160, 160))
+        img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
 
-                if img is None:
-                    print("Warning: Skipping invalid image")
-                    continue  # Skip invalid images
+        embedding = embedder.embeddings(np.expand_dims(img_rgb, axis=0))[0]
+        embedding = embedding / np.linalg.norm(embedding)
 
-                img_resized = cv2.resize(img, (160, 160))
-                img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
+        college_dir = os.path.join("data", college_id)
+        os.makedirs(college_dir, exist_ok=True)
+        pkl_file = os.path.join(college_dir, f"{username}_embeddings.pkl")
 
-                embedding = embedder.embeddings(np.expand_dims(img_rgb, axis=0))[0]
-                embedding = embedding / np.linalg.norm(embedding)  # Normalize
+        if os.path.exists(pkl_file):
+            with open(pkl_file, "rb") as f:
+                existing_data = pickle.load(f)
+        else:
+            existing_data = {"college_id": college_id, "username": username, "embeddings": []}
 
-                embeddings_data["embeddings"].append(embedding.tolist())
-                valid_images += 1
-            except Exception as e:
-                print(f"Error processing image: {str(e)}")
+        existing_data["embeddings"].append(embedding.tolist())
 
-        if valid_images == 0:
-            return jsonify({"message": "No valid images processed"}), 400
+        with open(pkl_file, "wb") as f:
+            pickle.dump(existing_data, f)
 
-        with open(user_file, "wb") as f:
-            pickle.dump(embeddings_data, f)
+        return jsonify({"message": "Embedding saved"}), 200
 
-        global face_embeddings
-        face_embeddings = load_embeddings()
-
-        return jsonify({"message": "Embeddings saved successfully"}), 200
     except Exception as e:
+        print("Error:", e)
         return jsonify({"error": str(e)}), 500
 
 @app.route("/detect_face", methods=["POST"])
 def detect_face():
-    """Detects and recognizes a face from an uploaded image."""
     try:
         data = request.get_json()
         if "image" not in data or not data["image"]:
             return jsonify({"error": "No image provided"}), 400
 
-        # Decode base64 image
-        image_data = data["image"].split(",")[1]  # Remove "data:image/jpeg;base64,"
+        image_data = data["image"].split(",")[1]
         image_bytes = base64.b64decode(image_data)
         image_np = np.frombuffer(image_bytes, dtype=np.uint8)
         image = cv2.imdecode(image_np, cv2.IMREAD_COLOR)
@@ -137,8 +175,8 @@ def detect_face():
         if image is None:
             return jsonify({"error": "Invalid image"}), 400
 
-        # Perform face recognition
         face_name = recognize_face(image)
+        mark_attendance(face_name)
 
         return jsonify({"name": face_name})
     except Exception as e:
@@ -146,4 +184,5 @@ def detect_face():
         return jsonify({"error": "Face recognition failed"}), 500
 
 if __name__ == '__main__':
+    os.makedirs("data", exist_ok=True)
     app.run(debug=True, host='0.0.0.0', port=8080)

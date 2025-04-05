@@ -3,105 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webcam Capture</title>
+    <title>Face Capture</title>
     <style>
         body {
-            background-color: #2a0134; 
-            color: white;
-            font-family: Arial, sans-serif;
+            background-color: #1e1e2d;
+            color: #fff;
+            font-family: 'Arial', sans-serif;
             text-align: center;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
         }
-        video, img {
+        .container {
+            background: #29293d;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 700px;
+        }
+        h2 {
+            margin-bottom: 20px;
+            font-size: 26px;
+        }
+        video {
             border-radius: 10px;
-            margin-top: 10px;
-            box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.3);
+            width: 100%;
+            max-width: 640px;
+            box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.2);
+        }
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
         }
         button {
-            background-color: #6200ea;
+            background-color: #007bff;
             color: white;
             border: none;
-            padding: 10px 15px;
-            margin: 10px;
-            border-radius: 5px;
-            cursor: pointer;
+            padding: 12px 20px;
+            border-radius: 10px;
             font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s ease-in-out;
         }
         button:hover {
-            background-color: #3700b3;
+            background-color: #0056b3;
         }
-        input {
-            padding: 8px;
-            border-radius: 5px;
+        input[type="text"] {
+            padding: 10px;
+            border-radius: 8px;
             border: none;
-            margin-bottom: 10px;
+            font-size: 16px;
+            margin-top: 10px;
+            width: 80%;
+            max-width: 300px;
+        }
+        p {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 15px;
+            color: #00ffcc;
         }
     </style>
 </head>
 <body>
-    <h2>Webcam Live Feed</h2>
-    <input type="text" id="username" placeholder="Enter your name">
-    <br>
-    <video id="video" width="640" height="480" autoplay></video>
-    <br>
-    <button onclick="startCapturing()">Start Capture</button>
-    <br>
-    <div id="captured-images"></div>
+    <div class="container">
+        <h2>Face Data Collector</h2>
+        <video id="video" autoplay></video>
+        <canvas id="canvas" style="display: none;"></canvas>
+        <br>
+        <input type="text" id="collegeInput" placeholder="Enter your College ID">
+        <br>
+        <input type="text" id="nameInput" placeholder="Enter your Name">
+        <div class="btn-container">
+            <button onclick="startCapture()">Start Capturing</button>
+            <button onclick="stopCapture()">Stop</button>
+        </div>
+        <p id="status">Waiting...</p>
+    </div>
 
     <script>
         let video = document.getElementById('video');
-        let images = [];
-        let capturing = false;
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+        let statusText = document.getElementById('status');
+        let nameInput = document.getElementById('nameInput');
+        let collegeInput = document.getElementById('collegeInput');
 
+        let imageCount = 0;
+        let isCapturing = false;
+
+        // Access webcam
         navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => console.error("Error accessing webcam:", err));
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Webcam error:", err);
+                statusText.innerText = "Error accessing webcam";
+            });
 
-        function startCapturing() {
-            let username = document.getElementById("username").value.trim();
-            if (!username) {
-                alert("Please enter your name before capturing images.");
+        function startCapture() {
+            if (!nameInput.value.trim() || !collegeInput.value.trim()) {
+                alert("Please enter both College ID and Name.");
                 return;
             }
 
-            images = [];  // Reset captured images
-            capturing = true;
-            captureImages(username, 0);
+            isCapturing = true;
+            imageCount = 0;
+            statusText.innerText = "Capturing images...";
+            captureImageLoop();
         }
 
-        function captureImages(username, count) {
-            if (count >= 100 || !capturing) {
-                capturing = false;
-                sendImages(username);
+        function stopCapture() {
+            isCapturing = false;
+            statusText.innerText = "Stopped.";
+        }
+
+        function captureImageLoop() {
+            if (!isCapturing || imageCount >= 100) {
+                statusText.innerText = imageCount >= 100 ? "✅ 100 images captured!" : "Stopped.";
                 return;
             }
 
-            let canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            let imgData = canvas.toDataURL('image/jpeg');
-            images.push(imgData);
+            let imageData = canvas.toDataURL('image/jpeg');
+            let payload = {
+                college_id: collegeInput.value.trim(),
+                username: nameInput.value.trim(),
+                image: imageData
+            };
 
-            let imgElement = document.createElement('img');
-            imgElement.src = imgData;
-            imgElement.width = 80;
-            imgElement.height = 60;
-            document.getElementById('captured-images').appendChild(imgElement);
-
-            setTimeout(() => captureImages(username, count + 1), 100); // Capture every 100ms
-        }
-
-        function sendImages(username) {
-            fetch('/save_images', {
+            fetch('/save_face', {
                 method: 'POST',
-                body: JSON.stringify({ username: username, images: images }),
-                headers: { 'Content-Type': 'application/json' }
+                body: JSON.stringify(payload),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             })
-            .then(response => response.json())
-            .then(data => alert(data.message))
-            .catch(error => console.error("Error:", error));
+            .then(res => res.json())
+            .then(data => {
+                imageCount++;
+                statusText.innerText = `Captured ${imageCount} / 100`;
+                setTimeout(captureImageLoop, 200); // delay between captures
+            })
+            .catch(err => {
+                console.error("Error saving image:", err);
+                statusText.innerText = "Error saving image!";
+                isCapturing = false;
+            });
         }
     </script>
 </body>
-</html> 
+</html>
