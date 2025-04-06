@@ -5,12 +5,12 @@ import pickle
 import base64
 from flask import Flask, request, jsonify, render_template, redirect, session, url_for, flash
 from keras_facenet import FaceNet
-from attendance import mark_attendance
+from attendance import mark_attendance  # Ensure this file and function exists
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'  # Change in production
+app.secret_key = 'supersecretkey'  # Change this in production
 
-# Admin credentials (for demo)
+# Admin credentials (demo purpose only)
 admin_credentials = {
     'xyz1': {'username': 'admin1', 'password': 'pass123'},
     'abc2': {'username': 'admin2', 'password': 'pass456'}
@@ -19,14 +19,22 @@ admin_credentials = {
 # Initialize FaceNet
 embedder = FaceNet()
 
-# Load saved face embeddings
-def load_embeddings():
+# ------------------ UTILITY FUNCTIONS ------------------ #
+
+def load_embeddings(college_id=None):
     embeddings = {}
     base_dir = "data"
-    for college_folder in os.listdir(base_dir):
+
+    if not os.path.exists(base_dir):
+        return embeddings
+
+    college_dirs = [college_id] if college_id else os.listdir(base_dir)
+
+    for college_folder in college_dirs:
         college_path = os.path.join(base_dir, college_folder)
         if not os.path.isdir(college_path):
             continue
+
         for file in os.listdir(college_path):
             if file.endswith("_embeddings.pkl"):
                 try:
@@ -36,11 +44,11 @@ def load_embeddings():
                         if username:
                             embeddings[username] = np.array(data["embeddings"])
                 except Exception as e:
-                    print(f"Error loading {file}: {e}")
+                    print(f"[ERROR] Loading {file}: {e}")
     return embeddings
 
-# Face recognition function
-def recognize_face(image):
+
+def recognize_face(image, college_id):
     try:
         img_resized = cv2.resize(image, (160, 160))
         img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
@@ -51,8 +59,7 @@ def recognize_face(image):
         min_dist = float("inf")
         threshold = 0.7
 
-        # Dynamic load for real-time recognition
-        face_embeddings = load_embeddings()
+        face_embeddings = load_embeddings(college_id)
 
         for username, stored_embeddings in face_embeddings.items():
             for stored_embedding in stored_embeddings:
@@ -63,10 +70,10 @@ def recognize_face(image):
 
         return best_match if min_dist < threshold else "Unknown"
     except Exception as e:
-        print(f"Face recognition error: {str(e)}")
+        print(f"[ERROR] Face recognition: {e}")
         return "Error"
 
-# ---------- Routes ----------
+# ------------------ ROUTES ------------------ #
 
 @app.route('/')
 def index():
@@ -157,7 +164,7 @@ def save_face():
         return jsonify({"message": "Embedding saved"}), 200
 
     except Exception as e:
-        print("Error:", e)
+        print("[ERROR] Saving face:", e)
         return jsonify({"error": str(e)}), 500
 
 @app.route("/detect_face", methods=["POST"])
@@ -175,13 +182,19 @@ def detect_face():
         if image is None:
             return jsonify({"error": "Invalid image"}), 400
 
-        face_name = recognize_face(image)
-        mark_attendance(face_name)
+        college_id = session.get("college_id")
+        if not college_id:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        face_name = recognize_face(image, college_id)
+        mark_attendance(face_name)  # You should define this in attendance.py
 
         return jsonify({"name": face_name})
     except Exception as e:
-        print("Error processing image:", e)
+        print("[ERROR] Face detection:", e)
         return jsonify({"error": "Face recognition failed"}), 500
+
+# ------------------ MAIN ------------------ #
 
 if __name__ == '__main__':
     os.makedirs("data", exist_ok=True)
