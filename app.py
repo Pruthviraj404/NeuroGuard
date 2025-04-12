@@ -6,9 +6,34 @@ import base64
 from flask import Flask, request, jsonify, render_template, redirect, session, url_for, flash
 from keras_facenet import FaceNet
 from attendance import mark_attendance  # Ensure this file and function exists
+import pandas as pd
+import sqlite3
+import datetime
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # Change this in production
+
+
+db_file = 'attendance.db'
+
+conn = sqlite3.connect(db_file)
+cursor = conn.cursor()
+
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS attendance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_name TEXT,
+        class_name TEXT,
+        college_id INTEGER,
+        timestamp TEXT
+    )
+''')
+conn.commit()
+
+marked_students = set()
+
+
+
 
 # Admin credentials (demo purpose only)
 admin_credentials = {
@@ -18,6 +43,13 @@ admin_credentials = {
 
 # Initialize FaceNet
 embedder = FaceNet()
+
+
+
+
+
+
+
 
 # ------------------ UTILITY FUNCTIONS ------------------ #
 
@@ -110,6 +142,12 @@ def dashboard():
         return redirect(url_for('login'))
     return render_template('dashboard.html', user=session['username'], college=session['college_id'])
 
+@app.route('/setting')
+def  setting():
+    return render_template("setting.html")
+
+
+
 @app.route('/faceregistration')
 def face_register():
     if 'username' not in session:
@@ -121,6 +159,26 @@ def recognize():
     if 'username' not in session:
         return redirect(url_for('login'))
     return render_template("face_recognize.html")
+
+from flask import render_template, session
+import sqlite3
+
+@app.route('/viewattendance')
+def view_attendance():
+    college_id = session.get('college_id')
+    if not college_id:
+        return "Unauthorized access. College ID not found in session.", 403
+
+    db_path = f'data/{college_id}/{college_id}attendance.db'
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT student_name, class_name, timestamp FROM attendance WHERE college_id = ?", (college_id,))
+    records = cursor.fetchall()
+    conn.close()
+
+    return render_template('attendance.html', records=records, college_id=college_id)
+
 
 @app.route('/save_face', methods=['POST'])
 def save_face():
@@ -187,12 +245,16 @@ def detect_face():
             return jsonify({"error": "Unauthorized"}), 403
 
         face_name = recognize_face(image, college_id)
-        mark_attendance(face_name)  # You should define this in attendance.py
+        
+        # 🆕 Call updated attendance function
+        from attendance import mark_attendance
+        mark_attendance(face_name, class_name="Class A")  # You can change the class name if needed
 
         return jsonify({"name": face_name})
     except Exception as e:
         print("[ERROR] Face detection:", e)
         return jsonify({"error": "Face recognition failed"}), 500
+
 
 # ------------------ MAIN ------------------ #
 

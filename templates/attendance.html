@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>College {{ college_id }} - Attendance Records</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 40px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #009879;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f3f3f3;
+        }
+    </style>
+</head>
+<body>
+    <h2>Attendance Records - College {{ college_id }}</h2>
+    <table>
+        <tr>
+            <th>Student Name</th>
+            <th>Class Name</th>
+            <th>Timestamp</th>
+        </tr>
+        {% for student_name, class_name, timestamp in records %}
+        <tr>
+            <td>{{ student_name }}</td>
+            <td>{{ class_name }}</td>
+            <td>{{ timestamp }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

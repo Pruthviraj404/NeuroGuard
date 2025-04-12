@@ -181,8 +181,8 @@
             <li><a href="#"><i class="fas fa-user-check"></i> Mark Attendance</a></li>
             <li><a href="#"><i class="fas fa-list"></i> Attendance Logs</a></li>
             <li><a href="#"><i class="fas fa-users"></i> Manage Users</a></li>
-            <li><a href="#"><i class="fas fa-cog"></i> Settings</a></li>
-            <li><a href="#"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            <li><a href="{{url_for('setting')}}"><i class="fas fa-cog"></i> Settings</a></li>
+            <li><a href="{{url_for('logout')}}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
         </ul>
     </div>
 
@@ -242,25 +242,21 @@
                     </tr>
                 </thead>
                 <tbody>
+                    {% for row in attendance %}
                     <tr>
-                        <td>Doe</td>
-                        <td>2025-03-23</td>
-                        <td>09:05 AM</td>
-                        <td class="present">Present</td>
+                        <td>{{ row['Employee'] }}</td>
+                        <td>{{ row['Date'] }}</td>
+                        <td>{{ row['Time'] }}</td>
+                        <td class="{% if row['Status'].lower() == 'present' %}present
+                                   {% elif row['Status'].lower() == 'late' %}late
+                                   {% elif row['Status'].lower() == 'absent' %}absent
+                                   {% endif %}">
+                            {{ row['Status'] }}
+                        </td>
                     </tr>
-                    <tr>
-                        <td>Jane Smith</td>
-                        <td>2025-03-23</td>
-                        <td>09:15 AM</td>
-                        <td class="late">Late</td>
-                    </tr>
-                    <tr>
-                        <td>Mike Son</td>
-                        <td>2025-03-23</td>
-                        <td>—</td>
-                        <td class="absent">Absent</td>
-                    </tr>
+                    {% endfor %}
                 </tbody>
+                
             </table>
         </section>
     </div>

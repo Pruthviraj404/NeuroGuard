@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Camera Settings | Facial Attendance</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f6ff;
+      margin: 0;
+      padding: 40px 20px;
+      color: #003e6b;
+    }
+
+    .container {
+      max-width: 750px;
+      margin: auto;
+      background: #ffffff;
+      padding: 35px 40px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0, 91, 187, 0.15);
+    }
+
+    h1 {
+      text-align: center;
+      color: #004a99;
+      margin-bottom: 40px;
+    }
+
+    .setting-group {
+      margin-bottom: 30px;
+    }
+
+    .setting-group h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #0074d9;
+      border-bottom: 2px solid #cce4ff;
+      padding-bottom: 5px;
+    }
+
+    label {
+      font-weight: 500;
+      display: block;
+      margin-top: 15px;
+    }
+
+    select, input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #b3d4fc;
+      border-radius: 8px;
+      margin-top: 5px;
+      font-size: 14px;
+      background-color: #f8fbff;
+    }
+
+    .toggle-option {
+      margin-top: 10px;
+    }
+
+    .toggle-option label {
+      font-weight: normal;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toggle-option input {
+      transform: scale(1.2);
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background-color: #0074d9;
+      color: #fff;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 30px;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #005fa3;
+    }
+
+    .icon-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .icon-title img {
+      width: 24px;
+      height: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📷 Camera Settings</h1>
+
+    <div class="setting-group">
+      <div class="icon-title">
+        <img src="https://cdn-icons-png.flaticon.com/512/2933/2933925.png" alt="camera icon">
+        <h2>Camera Device</h2>
+      </div>
+      <label for="cameraDevice">Select Camera</label>
+      <select id="cameraDevice">
+        <option>Front Camera</option>
+        <option>External USB Camera</option>
+        <option>IP Camera</option>
+      </select>
+    </div>
+
+    <div class="setting-group">
+      <div class="icon-title">
+        <img src="https://cdn-icons-png.flaticon.com/512/609/609803.png" alt="resolution icon">
+        <h2>Resolution</h2>
+      </div>
+      <label for="resolution">Choose Resolution</label>
+      <select id="resolution">
+        <option>1280x720 (HD)</option>
+        <option>1920x1080 (Full HD)</option>
+        <option>640x480 (SD)</option>
+      </select>
+    </div>
+
+    <div class="setting-group">
+      <div class="icon-title">
+        <img src="https://cdn-icons-png.flaticon.com/512/4287/4287702.png" alt="fps icon">
+        <h2>Frame Rate</h2>
+      </div>
+      <label for="fps">Frames Per Second</label>
+      <input type="number" id="fps" min="1" max="60" value="30">
+    </div>
+
+    <div class="setting-group">
+      <div class="icon-title">
+        <img src="https://cdn-icons-png.flaticon.com/512/2520/2520332.png" alt="features icon">
+        <h2>Advanced Features</h2>
+      </div>
+      <div class="toggle-option">
+        <label><input type="checkbox" checked> Enable Real-Time Face Detection</label>
+      </div>
+      <div class="toggle-option">
+        <label><input type="checkbox"> Auto-Capture Attendance</label>
+      </div>
+      <div class="toggle-option">
+        <label><input type="checkbox" checked> Show Live Preview</label>
+      </div>
+    </div>
+
+    <button>💾 Save Camera Settings</button>
+  </div>
+</body>
+</html>
