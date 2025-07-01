@@ -55,6 +55,6 @@ pip install -r requirements.txt
 Copy
 Edit
 python app.py
-Visit your app at: http://127.0.0.1:5000
+Visit your app at: http://127.0.0.1:8080
 ```
 
