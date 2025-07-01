@@ -31,31 +31,7 @@
 | AI/ML     | OpenCV, face_recognition, NumPy |
 | Packaging | Pickle (`.pkl`) for embeddings |
 
----
 
-## 📁 Project Structure
-
-NeuroGuard/
-├── pycache/ # Compiled Python files
-├── templates/ # HTML templates
-│ ├── login.html
-│ ├── dashboard.html
-│ ├── attendance.html
-│ ├── face_register.html
-│ ├── face_recognize.html
-│ └── setting.html
-├── data/ # Face embeddings (ignored by Git)
-│ ├── Pruthviraj_embeddings.pkl
-│ └── admin1_embeddings.pkl
-├── app.py # Main Flask application
-├── attendance.py # Face recognition logic
-├── attendance.db # SQLite database
-├── .gitignore # Git ignore rules
-├── requirements.txt # Python dependencies
-└── README.md # This file
-
-
----
 
 ## ✅ Setup Instructions
 
@@ -64,6 +40,21 @@ NeuroGuard/
 ```bash
 git clone https://github.com/Pruthviraj404/NeuroGuard.git
 cd NeuroGuard
+```
+### 2. Create Virtual Environment and Install Dependencies
+```bash
+Copy
+Edit
+python -m venv venv
+source venv/bin/activate        # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-
+ ## 3 Run the Application
+```bash
+Copy
+Edit
+python app.py
+Visit your app at: http://127.0.0.1:5000
+```
 
